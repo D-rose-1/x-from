@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>表单填写</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.container{background:#fff;border-radius:16px;padding:40px;width:100%;max-width:600px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.header{text-align:center;margin-bottom:32px}
+.header h1{font-size:24px;color:#1a1a2e;margin-bottom:8px}
+.header p{color:#888;font-size:14px}
+.form-group{margin-bottom:20px}
+.form-group label{display:block;font-size:14px;color:#333;margin-bottom:6px;font-weight:500}
+.form-group label .required{color:#e74c3c;margin-left:2px}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:10px 14px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;outline:none;transition:border .2s,box-shadow .2s;background:#fafafa}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,.1);background:#fff}
+.form-group textarea{resize:vertical;min-height:100px}
+.form-group .radio-group,.form-group .checkbox-group{display:flex;flex-wrap:wrap;gap:12px}
+.form-group .radio-item,.form-group .checkbox-item{display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}
+.form-group .radio-item input,.form-group .checkbox-item input{width:auto}
+.btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(102,126,234,.4)}
+.btn-primary:active{transform:translateY(0)}
+.success-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:1000;justify-content:center;align-items:center}
+.success-overlay.show{display:flex}
+.success-card{background:#fff;border-radius:20px;padding:48px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:bounceIn .5s}
+.success-card .icon{font-size:64px;margin-bottom:16px}
+.success-card h2{color:#2ec4b6;margin-bottom:8px}
+.success-card p{color:#888;margin-bottom:24px}
+@keyframes bounceIn{0%{transform:scale(.3);opacity:0}50%{transform:scale(1.05)}70%{transform:scale(.9)}100%{transform:scale(1);opacity:1}}
+.error{color:#e74c3c;font-size:12px;margin-top:4px;display:none}
+.loading{text-align:center;padding:60px;color:#888}
+.toast{position:fixed;top:24px;right:24px;padding:12px 24px;border-radius:8px;color:#fff;font-size:14px;z-index:2000}
+.toast-error{background:#e74c3c}
+</style>
+</head>
+<body>
+
+<div class="container" id="form-container">
+  <div class="loading" id="loading">⏳ 正在加载表单...</div>
+  <div id="form-content" style="display:none">
+    <div class="header">
+      <h1 id="form-title"></h1>
+      <p id="form-desc"></p>
+    </div>
+    <div id="form-fields"></div>
+    <div class="form-group">
+      <label>您的姓名</label>
+      <input id="submitter-name" placeholder="请输入您的姓名">
+    </div>
+    <div class="form-group">
+      <label>手机号码</label>
+      <input id="submitter-phone" placeholder="请输入手机号码">
+    </div>
+    <button class="btn btn-primary" onclick="submitForm()">📤 提交表单</button>
+  </div>
+</div>
+
+<div class="success-overlay" id="success-overlay">
+  <div class="success-card">
+    <div class="icon">🎉</div>
+    <h2>提交成功！</h2>
+    <p>感谢您的填写，表单已成功提交</p>
+    <button class="btn btn-primary" style="width:auto;padding:10px 32px" onclick="location.reload()">再填一份</button>
+  </div>
+</div>
+
+<div id="toast" class="toast" style="display:none"></div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const formKey = urlParams.get('key');
+const API = '/api/form';
+
+if (!formKey) {
+  document.getElementById('loading').innerHTML = '<p style="color:#e74c3c">❌ 缺少表单标识（key参数），请通过正确的分享链接访问</p>';
+} else {
+  loadForm();
+}
+
+async function loadForm() {
+  try {
+    const res = await fetch(API + '/detail/' + formKey);
+    const json = await res.json();
+    if (json.code !== '0000') throw new Error(json.info);
+    
+    const form = json.data;
+    document.getElementById('form-title').textContent = form.title;
+    document.getElementById('form-desc').textContent = form.description || '';
+    document.title = form.title + ' - 表单填写';
+
+    const fieldsContainer = document.getElementById('form-fields');
+    fieldsContainer.innerHTML = (form.fields || []).map(f => {
+      let input = '';
+      const req = f.required === 1 ? '<span class="required">*</span>' : '';
+      const ph = f.placeholder || '请输入' + f.fieldLabel;
+
+      switch(f.fieldType) {
+        case 'textarea':
+          input = `<textarea id="field-${f.fieldKey}" placeholder="${ph}" ${f.required?'required':''}></textarea>`;
+          break;
+        case 'number':
+          input = `<input type="number" id="field-${f.fieldKey}" placeholder="${ph}" ${f.required?'required':''}>`;
+          break;
+        case 'select':
+          const opts = (f.options || '').split(',').map(o => `<option value="${o.trim()}">${o.trim()}</option>`).join('');
+          input = `<select id="field-${f.fieldKey}" ${f.required?'required':''}><option value="">请选择</option>${opts}</select>`;
+          break;
+        case 'radio':
+          const radios = (f.options || '').split(',').map(o => 
+            `<label class="radio-item"><input type="radio" name="field-${f.fieldKey}" value="${o.trim()}" ${f.required?'required':''}> ${o.trim()}</label>`
+          ).join('');
+          input = `<div class="radio-group">${radios}</div>`;
+          break;
+        case 'checkbox':
+          const checks = (f.options || '').split(',').map(o => 
+            `<label class="checkbox-item"><input type="checkbox" name="field-${f.fieldKey}" value="${o.trim()}"> ${o.trim()}</label>`
+          ).join('');
+          input = `<div class="checkbox-group">${checks}</div>`;
+          break;
+        case 'date':
+          input = `<input type="date" id="field-${f.fieldKey}" ${f.required?'required':''}>`;
+          break;
+        case 'email':
+          input = `<input type="email" id="field-${f.fieldKey}" placeholder="${ph}" ${f.required?'required':''}>`;
+          break;
+        default:
+          input = `<input type="text" id="field-${f.fieldKey}" placeholder="${ph}" ${f.required?'required':''}>`;
+      }
+      return `<div class="form-group"><label>${f.fieldLabel} ${req}</label>${input}</div>`;
+    }).join('');
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('form-content').style.display = 'block';
+  } catch(e) {
+    document.getElementById('loading').innerHTML = '<p style="color:#e74c3c">❌ 加载失败: ' + e.message + '</p>';
+  }
+}
+
+async function submitForm() {
+  const name = document.getElementById('submitter-name').value.trim();
+  if (!name) { toast('请输入您的姓名'); return; }
+
+  const data = {};
+  const form = document.getElementById('form-fields');
+  const inputs = form.querySelectorAll('input,textarea,select');
+
+  // 收集字段数据
+  const fieldIds = {};
+  form.querySelectorAll('[id^="field-"]').forEach(el => {
+    const key = el.id.replace('field-', '');
+    if (fieldIds[key]) return;
+    fieldIds[key] = true;
+
+    if (el.type === 'radio') {
+      const checked = form.querySelector(`input[name="field-${key}"]:checked`);
+      if (checked) data[key] = checked.value;
+    } else if (el.type === 'checkbox') {
+      const checked = form.querySelectorAll(`input[name="field-${key}"]:checked`);
+      data[key] = Array.from(checked).map(c => c.value).join(',');
+    } else if (el.id && el.id.startsWith('field-')) {
+      data[key] = el.value;
+    }
+  });
+
+  try {
+    const res = await fetch(API + '/submit', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({formKey, data, submitterName: name, submitterPhone: document.getElementById('submitter-phone').value.trim()})
+    });
+    const json = await res.json();
+    if (json.code === '0000') {
+      document.getElementById('success-overlay').classList.add('show');
+    } else {
+      toast('提交失败: ' + json.info);
+    }
+  } catch(e) {
+    toast('请求失败: ' + e.message);
+  }
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast toast-error';
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+</script>
+</body>
+</html>

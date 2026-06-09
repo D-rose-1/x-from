@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.wwc.x.infrastructure.dao.IFormDefinitionDao">
+
+    <resultMap id="BaseResultMap" type="cn.wwc.x.infrastructure.dao.po.FormDefinitionPO">
+        <id column="id" property="id"/>
+        <result column="form_key" property="formKey"/>
+        <result column="title" property="title"/>
+        <result column="description" property="description"/>
+        <result column="status" property="status"/>
+        <result column="share_link" property="shareLink"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.wwc.x.infrastructure.dao.po.FormDefinitionPO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO form_definition (form_key, title, description, status, share_link, created_by)
+        VALUES (#{formKey}, #{title}, #{description}, #{status}, #{shareLink}, #{createdBy})
+    </insert>
+
+    <select id="selectByFormKey" resultMap="BaseResultMap">
+        SELECT * FROM form_definition WHERE form_key = #{formKey}
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM form_definition WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT * FROM form_definition ORDER BY created_at DESC
+    </select>
+
+    <update id="updateStatus">
+        UPDATE form_definition SET status = #{status} WHERE id = #{id}
+    </update>
+
+</mapper>

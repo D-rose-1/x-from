@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.wwc.x.infrastructure.dao.IFormFieldDao">
+
+    <resultMap id="BaseResultMap" type="cn.wwc.x.infrastructure.dao.po.FormFieldPO">
+        <id column="id" property="id"/>
+        <result column="form_id" property="formId"/>
+        <result column="field_key" property="fieldKey"/>
+        <result column="field_label" property="fieldLabel"/>
+        <result column="field_type" property="fieldType"/>
+        <result column="required" property="required"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="options_json" property="optionsJson"/>
+        <result column="placeholder" property="placeholder"/>
+    </resultMap>
+
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO form_field (form_id, field_key, field_label, field_type, required, sort_order, options_json, placeholder)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.formId}, #{item.fieldKey}, #{item.fieldLabel}, #{item.fieldType},
+             #{item.required}, #{item.sortOrder}, #{item.optionsJson}, #{item.placeholder})
+        </foreach>
+    </insert>
+
+    <select id="selectByFormId" resultMap="BaseResultMap">
+        SELECT * FROM form_field WHERE form_id = #{formId} ORDER BY sort_order ASC
+    </select>
+
+</mapper>
