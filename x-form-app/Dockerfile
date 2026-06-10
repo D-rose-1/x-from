@@ -14,4 +14,4 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 # 添加应用
 ADD target/x-form-app.jar /x-form-app.jar
 
-ENTRYPOINT ["sh","-c","java -jar $JAVA_OPTS /x-form-app.jar $PARAMS"]
+ENTRYPOINT ["sh","-c","java -jar $JAVA_OPTS -Xms256m -Xmx512m -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 /x-form-app.jar $PARAMS"]

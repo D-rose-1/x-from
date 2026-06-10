@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>x-form 管理端</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:#f0f2f5;color:#333}
+.header{background:#1a1a2e;color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.header h1{font-size:20px;font-weight:600}
+.header .user{font-size:14px;opacity:.85}
+.container{max-width:1400px;margin:0 auto;padding:24px}
+.nav{display:flex;gap:0;background:#fff;border-radius:8px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.nav-item{padding:14px 28px;cursor:pointer;font-size:14px;color:#666;border-bottom:2px solid transparent;transition:all .2s}
+.nav-item:hover{color:#4361ee}
+.nav-item.active{color:#4361ee;border-bottom-color:#4361ee;font-weight:600}
+.card{background:#fff;border-radius:8px;padding:24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card-title{font-size:16px;font-weight:600;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid #f0f0f0}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;color:#666;margin-bottom:6px;font-weight:500}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:8px 12px;border:1px solid #d9d9d9;border-radius:6px;font-size:14px;outline:none;transition:border .2s}
+.form-group input:focus,.form-group textarea:focus{border-color:#4361ee;box-shadow:0 0 0 2px rgba(67,97,238,.1)}
+.form-group textarea{resize:vertical;min-height:80px}
+.field-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;padding:12px;background:#fafafa;border-radius:6px;border:1px solid #f0f0f0}
+.field-row input,.field-row select{padding:6px 10px;font-size:13px}
+.field-row .col1{flex:2}
+.field-row .col2{flex:1}
+.field-row .col3{flex:0 0 80px}
+.btn{padding:8px 20px;border:none;border-radius:6px;font-size:14px;cursor:pointer;transition:all .2s;font-weight:500}
+.btn-primary{background:#4361ee;color:#fff}
+.btn-primary:hover{background:#3a56d4}
+.btn-success{background:#2ec4b6;color:#fff}
+.btn-success:hover{background:#26a69a}
+.btn-danger{background:#e74c3c;color:#fff}
+.btn-danger:hover{background:#c0392b}
+.btn-outline{background:#fff;color:#4361ee;border:1px solid #4361ee}
+.btn-sm{padding:4px 12px;font-size:12px}
+table{width:100%;border-collapse:collapse}
+table th,table td{padding:12px 16px;text-align:left;border-bottom:1px solid #f0f0f0;font-size:13px}
+table th{background:#fafafa;font-weight:600;color:#666}
+table tr:hover{background:#fafafa}
+.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:500}
+.tag-draft{background:#fff3cd;color:#856404}
+.tag-published{background:#d4edda;color:#155724}
+.tag-closed{background:#f8d7da;color:#721c24}
+.link{color:#4361ee;text-decoration:none;font-size:12px}
+.link:hover{text-decoration:underline}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;justify-content:center;align-items:center}
+.modal.show{display:flex}
+.modal-content{background:#fff;border-radius:12px;padding:24px;width:90%;max-width:800px;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-close{font-size:24px;cursor:pointer;color:#999}
+.submission-data{max-height:400px;overflow-y:auto}
+.json-view{background:#282c34;color:#abb2bf;padding:16px;border-radius:8px;font-family:'Fira Code',monospace;font-size:13px;white-space:pre-wrap;word-break:break-all}
+.empty{padding:60px;text-align:center;color:#999;font-size:14px}
+.toast{position:fixed;top:24px;right:24px;padding:12px 24px;border-radius:8px;color:#fff;font-size:14px;z-index:2000;animation:slideIn .3s}
+.toast-success{background:#2ec4b6}
+.toast-error{background:#e74c3c}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📋 x-form 管理端</h1>
+  <span class="user">运营后台</span>
+</div>
+
+<div class="container">
+  <div class="nav">
+    <div class="nav-item active" onclick="switchTab('list')">📄 表单列表</div>
+    <div class="nav-item" onclick="switchTab('create')">✨ 创建表单</div>
+  </div>
+
+  <!-- 表单列表 -->
+  <div id="tab-list">
+    <div class="card">
+      <div class="card-title">表单列表</div>
+      <table id="form-table">
+        <thead><tr><th>ID</th><th>标题</th><th>标识</th><th>状态</th><th>分享链接</th><th>创建时间</th><th>操作</th></tr></thead>
+        <tbody id="form-tbody"></tbody>
+      </table>
+      <div id="form-empty" class="empty" style="display:none">暂无表单，点击上方「创建表单」开始</div>
+    </div>
+  </div>
+
+  <!-- 创建表单 -->
+  <div id="tab-create" style="display:none">
+    <div class="card">
+      <div class="card-title">创建新表单</div>
+      <div class="form-group">
+        <label>表单标题 *</label>
+        <input id="create-title" placeholder="如：2024年度员工满意度调查">
+      </div>
+      <div class="form-group">
+        <label>表单描述</label>
+        <textarea id="create-desc" placeholder="简单描述此表单的用途..."></textarea>
+      </div>
+      <div class="form-group" style="display:flex;justify-content:space-between;align-items:center">
+        <label style="margin:0">表单字段</label>
+        <button class="btn btn-outline btn-sm" onclick="addField()">+ 添加字段</button>
+      </div>
+      <div id="fields-container"></div>
+      <button class="btn btn-primary" onclick="createForm()" style="margin-top:16px;width:100%">🚀 创建并发布表单</button>
+    </div>
+  </div>
+</div>
+
+<!-- 查看提交数据弹窗 -->
+<div class="modal" id="submission-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>📊 提交数据</h3>
+      <span class="modal-close" onclick="closeModal()">&times;</span>
+    </div>
+    <div class="submission-data">
+      <table id="submission-table">
+        <thead><tr><th>ID</th><th>提交人</th><th>手机号</th><th>数据</th><th>时间</th></tr></thead>
+        <tbody id="submission-tbody"></tbody>
+      </table>
+      <div id="submission-empty" class="empty" style="display:none">暂无提交数据</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" style="display:none"></div>
+
+<script>
+const API = '/api/form';
+let currentTab = 'list';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-item').forEach((el,i) => el.classList.toggle('active', (i===0 && tab==='list') || (i===1 && tab==='create')));
+  document.getElementById('tab-list').style.display = tab === 'list' ? 'block' : 'none';
+  document.getElementById('tab-create').style.display = tab === 'create' ? 'block' : 'none';
+  if (tab === 'list') loadFormList();
+}
+
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast toast-' + (type || 'success');
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+async function loadFormList() {
+  try {
+    const res = await fetch(API + '/list');
+    const json = await res.json();
+    const forms = json.data.list || [];
+    const tbody = document.getElementById('form-tbody');
+    const empty = document.getElementById('form-empty');
+    if (forms.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    tbody.innerHTML = forms.map(f => `
+      <tr>
+        <td>${f.id}</td>
+        <td><strong>${f.title}</strong></td>
+        <td><code>${f.formKey}</code></td>
+        <td><span class="tag tag-${f.status===1?'draft':f.status===2?'published':'closed'}">${f.status===1?'草稿':f.status===2?'已发布':'已关闭'}</span></td>
+        <td><a class="link" href="/user/?key=${f.formKey}" target="_blank">/user/?key=${f.formKey}</a></td>
+        <td>${f.createdAt ? f.createdAt.substring(0,10) : ''}</td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="viewSubmissions(${f.id})">📊 数据</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    toast('加载失败: ' + e.message, 'error');
+  }
+}
+
+let fieldCount = 0;
+function addField() {
+  fieldCount++;
+  const container = document.getElementById('fields-container');
+  const div = document.createElement('div');
+  div.className = 'field-row';
+  div.id = 'field-' + fieldCount;
+  div.innerHTML = `
+    <div class="col1"><input placeholder="字段标签（如：姓名）" id="flabel-${fieldCount}"></div>
+    <div class="col1"><input placeholder="字段标识（如：name）" id="fkey-${fieldCount}"></div>
+    <div class="col2">
+      <select id="ftype-${fieldCount}" onchange="onTypeChange(${fieldCount})">
+        <option value="text">单行文本</option><option value="textarea">多行文本</option>
+        <option value="number">数字</option><option value="select">下拉选择</option>
+        <option value="radio">单选框</option><option value="checkbox">多选框</option>
+        <option value="date">日期</option><option value="email">邮箱</option>
+      </select>
+    </div>
+    <div class="col2">
+      <select id="frequired-${fieldCount}"><option value="0">非必填</option><option value="1">必填</option></select>
+    </div>
+    <div class="col3"><button class="btn btn-danger btn-sm" onclick="removeField(${fieldCount})">删除</button></div>
+    <div class="col1" id="foptions-wrap-${fieldCount}" style="display:none"><input placeholder="选项（逗号分隔，如：选项A,选项B）" id="foptions-${fieldCount}"></div>
+  `;
+  container.appendChild(div);
+}
+
+function onTypeChange(idx) {
+  const type = document.getElementById('ftype-' + idx).value;
+  document.getElementById('foptions-wrap-' + idx).style.display = 
+    (type === 'select' || type === 'radio' || type === 'checkbox') ? 'block' : 'none';
+}
+function removeField(idx) {
+  document.getElementById('field-' + idx).remove();
+}
+
+async function createForm() {
+  const title = document.getElementById('create-title').value.trim();
+  if (!title) { toast('请输入表单标题', 'error'); return; }
+
+  const fields = [];
+  for (let i = 1; i <= fieldCount; i++) {
+    const el = document.getElementById('field-' + i);
+    if (!el) continue;
+    const label = document.getElementById('flabel-' + i)?.value.trim();
+    const key = document.getElementById('fkey-' + i)?.value.trim();
+    if (!label || !key) continue;
+    fields.push({
+      fieldKey: key, fieldLabel: label,
+      fieldType: document.getElementById('ftype-' + i).value,
+      required: parseInt(document.getElementById('frequired-' + i).value),
+      options: document.getElementById('foptions-' + i)?.value || null,
+      placeholder: '请输入' + label
+    });
+  }
+
+  try {
+    const res = await fetch(API + '/create', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({title, description: document.getElementById('create-desc').value.trim(), createdBy:'admin', fields})
+    });
+    const json = await res.json();
+    if (json.code === '0000') {
+      toast('✅ 表单创建成功！分享链接：' + json.data.shareLink, 'success');
+      document.getElementById('create-title').value = '';
+      document.getElementById('create-desc').value = '';
+      document.getElementById('fields-container').innerHTML = '';
+      fieldCount = 0;
+      switchTab('list');
+    } else {
+      toast('创建失败: ' + json.info, 'error');
+    }
+  } catch(e) {
+    toast('请求失败: ' + e.message, 'error');
+  }
+}
+
+let currentFormId = null;
+async function viewSubmissions(formId) {
+  currentFormId = formId;
+  try {
+    const res = await fetch(API + '/submissions/' + formId);
+    const json = await res.json();
+    const subs = json.data || [];
+    const tbody = document.getElementById('submission-tbody');
+    const empty = document.getElementById('submission-empty');
+    if (subs.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+    } else {
+      empty.style.display = 'none';
+      tbody.innerHTML = subs.map(s => `
+        <tr>
+          <td>${s.id}</td><td>${s.submitterName||'-'}</td><td>${s.submitterPhone||'-'}</td>
+          <td><pre class="json-view" style="font-size:11px;max-width:300px">${JSON.stringify(JSON.parse(s.submitData||'{}'),null,2)}</pre></td>
+          <td>${s.createdAt ? s.createdAt.substring(0,16) : ''}</td>
+        </tr>
+      `).join('');
+    }
+    document.getElementById('submission-modal').classList.add('show');
+  } catch(e) {
+    toast('加载失败: ' + e.message, 'error');
+  }
+}
+
+function closeModal() {
+  document.getElementById('submission-modal').classList.remove('show');
+}
+
+// 初始加载
+loadFormList();
+</script>
+</body>
+</html>
+
+<!-- ========== 智能客服浮窗 ========== -->
+<style>
+.chat-fab{position:fixed;bottom:28px;right:28px;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#4361ee,#764ba2);color:#fff;font-size:28px;cursor:pointer;box-shadow:0 4px 20px rgba(67,97,238,.4);z-index:9999;transition:all .3s;display:flex;align-items:center;justify-content:center;line-height:1}
+.chat-fab:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(67,97,238,.5)}
+.chat-fab.hidden{display:none}
+.chat-panel{position:fixed;bottom:96px;right:28px;width:380px;height:520px;background:#fff;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.18);z-index:9998;display:none;flex-direction:column;overflow:hidden;transition:all .3s;animation:chatSlideUp .3s ease}
+.chat-panel.open{display:flex}
+@keyframes chatSlideUp{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+.chat-header{background:linear-gradient(135deg,#4361ee,#764ba2);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.chat-header h3{font-size:16px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px}
+.chat-header .badge{font-size:10px;background:rgba(255,255,255,.25);padding:2px 8px;border-radius:10px;font-weight:400}
+.chat-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:0 4px;line-height:1;opacity:.8}
+.chat-close:hover{opacity:1}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:#f7f8fc}
+.chat-messages::-webkit-scrollbar{width:4px}
+.chat-messages::-webkit-scrollbar-thumb{background:#d0d0d0;border-radius:4px}
+.msg{max-width:82%;animation:msgIn .25s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg-user{align-self:flex-end}
+.msg-assistant{align-self:flex-start}
+.msg-system{display:none}
+.msg .bubble{padding:10px 14px;border-radius:16px;font-size:13.5px;line-height:1.6;word-break:break-word;white-space:pre-wrap}
+.msg-user .bubble{background:linear-gradient(135deg,#4361ee,#5a4ff3);color:#fff;border-bottom-right-radius:4px}
+.msg-assistant .bubble{background:#fff;color:#333;border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.msg .time{font-size:10px;color:#aaa;margin-top:4px;padding:0 4px}
+.msg-user .time{text-align:right}
+.quick-hints{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;background:#f7f8fc;flex-shrink:0}
+.quick-hint{padding:5px 12px;border-radius:14px;border:1px solid #e0e0e0;background:#fff;font-size:12px;color:#555;cursor:pointer;transition:all .2s;white-space:nowrap}
+.quick-hint:hover{border-color:#4361ee;color:#4361ee;background:#f0f3ff}
+.chat-input-area{padding:12px 16px;background:#fff;border-top:1px solid #f0f0f0;display:flex;gap:10px;align-items:flex-end;flex-shrink:0}
+.chat-input-area textarea{flex:1;border:1.5px solid #e8e8e8;border-radius:20px;padding:9px 16px;font-size:13.5px;outline:none;resize:none;max-height:80px;font-family:inherit;line-height:1.5;transition:border .2s}
+.chat-input-area textarea:focus{border-color:#4361ee}
+.chat-input-area .send-btn{width:40px;height:40px;border-radius:50%;border:none;background:linear-gradient(135deg,#4361ee,#764ba2);color:#fff;font-size:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1}
+.chat-input-area .send-btn:hover{transform:scale(1.06)}
+.chat-input-area .send-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.typing-dots{display:flex;gap:4px;padding:8px 0}
+.typing-dots span{width:7px;height:7px;border-radius:50%;background:#bbb;animation:typingBounce 1.4s infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes typingBounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+@media(max-width:480px){.chat-panel{width:92vw;right:4vw;height:64vh;bottom:84px}.chat-fab{bottom:20px;right:20px;width:50px;height:50px;font-size:24px}}
+</style>
+<button class="chat-fab" id="chat-fab" title="智能客服" onclick="toggleChat()">💬</button>
+<div class="chat-panel" id="chat-panel">
+<div class="chat-header"><h3>🤖 智能客服 <span class="badge">AI</span></h3><button class="chat-close" onclick="toggleChat()">✕</button></div>
+<div class="chat-messages" id="chat-messages">
+<div class="msg msg-assistant"><div class="bubble">👋 你好！我是 x-form 智能客服助手！<br><br>我能帮你了解：<br>• 如何创建和管理表单<br>• 表单支持的字段类型<br>• 如何发布和分享表单<br>• 如何查看提交数据<br><br>请问有什么可以帮你的？</div><div class="time">刚刚</div></div>
+</div>
+<div class="quick-hints" id="quick-hints">
+<button class="quick-hint" onclick="sendQuick('如何创建一个表单？')">📝 创建表单</button>
+<button class="quick-hint" onclick="sendQuick('表单支持哪些字段类型？')">📋 字段类型</button>
+<button class="quick-hint" onclick="sendQuick('如何查看提交数据？')">📊 查看数据</button>
+<button class="quick-hint" onclick="sendQuick('如何分享表单给别人填写？')">🔗 分享表单</button>
+</div>
+<div class="chat-input-area">
+<textarea id="chat-textarea" placeholder="输入你的问题..." rows="1" onkeydown="onChatKeydown(event)"></textarea>
+<button class="send-btn" id="chat-send-btn" onclick="sendMessage()">▶</button>
+</div>
+</div>
+<script>
+(function(){var API='/api/chat',SK='xform_chat_sid',sid=localStorage.getItem(SK)||'',sending=false;window.toggleChat=function(){var p=document.getElementById('chat-panel');p.classList.contains('open')?p.classList.remove('open'):(p.classList.add('open'),scrollToBottom(),setTimeout(function(){var t=document.getElementById('chat-textarea');t&&t.focus()},300))};window.sendQuick=function(m){document.getElementById('chat-textarea').value=m;sendMessage()};window.onChatKeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}};window.sendMessage=async function(){if(sending)return;var ta=document.getElementById('chat-textarea'),msg=ta.value.trim();if(!msg)return;sending=true;ta.value='';autoResize(ta);appendMessage('user',msg);document.getElementById('quick-hints').style.display='none';document.getElementById('chat-send-btn').disabled=true;var typingEl=showTyping();try{var res=await fetch(API+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:sid,message:msg})});var json=await res.json();if(typingEl)typingEl.remove();if(json.code==='0000'){sid=json.data.sessionId;localStorage.setItem(SK,sid);appendMessage('assistant',json.data.reply)}else{appendMessage('assistant','抱歉，服务暂不可用：'+(json.info||'未知错误'))}}catch(e){if(typingEl)typingEl.remove();appendMessage('assistant','网络连接失败，请检查网络后重试。')}finally{sending=false;document.getElementById('chat-send-btn').disabled=false;scrollToBottom()}};function appendMessage(role,content){var c=document.getElementById('chat-messages'),d=document.createElement('div');d.className='msg msg-'+role;d.innerHTML='<div class="bubble">'+escapeHtml(content)+'</div><div class="time">'+formatTime()+'</div>';c.appendChild(d);scrollToBottom()}function showTyping(){var c=document.getElementById('chat-messages'),d=document.createElement('div');d.className='msg msg-assistant';d.id='typing-indicator';d.innerHTML='<div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';c.appendChild(d);scrollToBottom();return d}function scrollToBottom(){var e=document.getElementById('chat-messages');setTimeout(function(){e.scrollTop=e.scrollHeight},50)}function autoResize(e){e.style.height='auto';e.style.height=Math.min(e.scrollHeight,80)+'px'}function escapeHtml(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML.replace(/\n/g,'<br>')}function formatTime(){var d=new Date();return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')}document.addEventListener('DOMContentLoaded',function(){var ta=document.getElementById('chat-textarea');ta&&ta.addEventListener('input',function(){autoResize(ta)})})})();
+</script>

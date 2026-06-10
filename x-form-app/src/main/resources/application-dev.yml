@@ -40,3 +40,8 @@ logging:
   level:
     root: info
   config: classpath:logback-spring.xml
+
+# Ollama 智能客服配置
+ollama:
+  base-url: http://124.220.80.88:11434
+  model: qwen2.5:0.5b
